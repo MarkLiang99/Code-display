@@ -1,0 +1,218 @@
+---
+title: "EDA report"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+diagnosis <- read.table("diagnosis.data", fileEncoding="UTF-16", dec=",")
+diagnosis
+
+```
+
+
+
+```{r}
+colnames(diagnosis) <- c('Temperature of patient','Occurrence of nausea','Lumbar pain','Urine pushing','Micturition pains','Burning of urethra, itch, swelling of urethra outlet','Inflammation of urinary bladder','Nephritis of renal pelvis origin')
+diagnosis
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(gridExtra)
+library(prettyR)
+library(ggcorrplot)
+```
+
+```{r}
+summarize_numeric = function(dataset) {
+  
+  dataset = select_if(dataset, is.numeric)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+           'Mean' = colMeans(dataset, na.rm = TRUE),
+           'Min' = apply(dataset, 2, function (x) min(x, na.rm = TRUE)),
+           'Max' = apply(dataset, 2, function (x) max(x, na.rm = TRUE)),
+           'SD' = apply(dataset, 2, function (x) sd(x, na.rm = TRUE))
+    )
+  summary.table
+}
+
+
+#
+
+summarize_character = function(dataset) {
+  
+  dataset = select_if(dataset, is.character)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+    )
+  summary.table
+}
+
+#
+summarize_factor = function(dataset) {
+  
+  dataset = select_if(dataset, is.factor)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+           'Mode' = apply(dataset, 2, function (x) mode(x)),
+    )
+  summary.table
+}
+
+
+
+```
+
+```{r}
+numeric_diagnosis <- summarize_numeric(diagnosis)
+numeric_diagnosis
+```
+
+```{r}
+char_diagnosis <- summarize_character(diagnosis)
+char_diagnosis
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+g1 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Occurrence of nausea`), position = "fill") + labs(y = "Percent")
+g1
+```
+
+```{r}
+g2 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Lumbar pain`), position = "fill") + labs(y = "Percent")
+g2
+```
+
+
+```{r}
+g3 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Urine pushing`), position = "fill") + labs(y = "Percent")
+g3
+```
+
+
+
+```{r}
+g4 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Micturition pains`), position = "fill") + labs(y = "Percent")
+g4
+```
+
+
+
+```{r}
+g5 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Burning of urethra, itch, swelling of urethra outlet`), position = "fill") + labs(y = "Percent")
+g5
+```
+
+
+
+```{r}
+g6 = ggplot(diagnosis) + geom_bar(aes(x=`Temperature of patient`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+g6
+```
+
+```{r}
+g7 = ggplot(diagnosis) + geom_boxplot(aes(y= `Temperature of patient`, x=`Inflammation of urinary bladder`))
+g7
+```
+
+```{r}
+g8 = ggplot(diagnosis) + geom_boxplot(aes(y= `Temperature of patient`, x=`Nephritis of renal pelvis origin`))
+g8
+```
+
+
+
+
+
+
+```{R}
+q1 = ggplot(diagnosis) + geom_bar(aes(x=`Occurrence of nausea`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+q1
+```
+
+```{R}
+q2 = ggplot(diagnosis) + geom_bar(aes(x=`Lumbar pain`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+q2
+```
+
+
+
+```{R}
+q3 = ggplot(diagnosis) + geom_bar(aes(x=`Urine pushing`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+q3
+```
+
+
+```{R}
+q4 = ggplot(diagnosis) + geom_bar(aes(x=`Micturition pains`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+q4
+```
+
+```{R}
+q5 = ggplot(diagnosis) + geom_bar(aes(x=`Burning of urethra, itch, swelling of urethra outlet`, fill = `Inflammation of urinary bladder`), position = "fill") + labs(y = "Percent")
+q5
+```
+
+
+```{R}
+grid.arrange( q2, q3, q4, nrow=2)
+```
+
+```{R}
+w1 = ggplot(diagnosis) + geom_bar(aes(x=`Occurrence of nausea`, fill = `Nephritis of renal pelvis origin`), position = "fill") + labs(y = "Percent")
+w1
+```
+
+
+```{R}
+w2 = ggplot(diagnosis) + geom_bar(aes(x=`Lumbar pain`, fill = `Nephritis of renal pelvis origin`), position = "fill") + labs(y = "Percent")
+w2
+```
+
+
+```{R}
+w3 = ggplot(diagnosis) + geom_bar(aes(x=`Urine pushing`, fill = `Nephritis of renal pelvis origin`), position = "fill") + labs(y = "Percent")
+w3
+```
+
+
+```{R}
+w4 = ggplot(diagnosis) + geom_bar(aes(x=`Micturition pains`, fill = `Nephritis of renal pelvis origin`), position = "fill") + labs(y = "Percent")
+w4
+```
+
+
+```{R}
+w5 = ggplot(diagnosis) + geom_bar(aes(x=`Burning of urethra, itch, swelling of urethra outlet`, fill = `Nephritis of renal pelvis origin`), position = "fill") + labs(y = "Percent")
+w5
+```
+
+```{R}
+grid.arrange(w1, w2,w5, nrow=3)
+```

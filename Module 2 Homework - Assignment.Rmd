@@ -1,0 +1,305 @@
+---
+title: 'Homework #2 Assignment'
+author: "Haotian Liang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+
+*Due:  January 29, 2022*
+
+For this assignment (and all assignments in this class), you are to turn in your work as an R Markdown document.  Submit your solutions to GradeScope in PDF format.
+
+
+# Problem 1
+
+For this problem, we will be using the `netflix_titles.csv` file which is a dataset from a Netflix Movies and TV Shows study.  Most of the column names are reasonably descriptive.  The only columns that may be confusing is AgeCHDdiag which is the age the patient was diagnosed as having CHD (*Chronic heart disease*) and MRW which stands for *Metropolitan Relative Weight*, an old medical index of a ratio of a person's weight compared to a desirable weight for that person's height and gender.
+
+a)  For each attribute, identify (by replacing the 'xxx'in the table) whether it is a measure (quantitative) or a category (qualitative) and then for the measures whether it is of type interval or ratio and for the categories whether it is of type ordinal or nominal:  (10 points)
+
+Attribute  | Category/Measure | Interval/Ratio or Nominal/Ordinal
+------------- | ------------- | ------------- 
+show_id | Category | Nominal
+type | Category| Nominal
+title | Category | Nominal
+director | Category| Nominal
+cast | Category| Nominal
+country | Category| Nominal
+date_added | Category | Interval
+release_year | Category | Interval
+rating | Category| Ordinal
+duration | Measure | Interval
+listed_in | Category | Nominal
+
+
+b)  Read the file into a tibble, convert the `char` columns to factors, and add a new binary column *PG_13* that has a value of 1 if the movie is rated as "PG-13" and a 0 otherwise (5 points)
+
+```{r}
+library(tibble)
+library(dplyr)
+netflix_1 <- read.csv(file= 'netflix_titles.csv')
+netflix <- as_tibble(netflix_1)
+netflix <- lapply(netflix,as.factor)
+netflix <- as_tibble(netflix)
+str(netflix)
+```
+
+```{r}
+head(netflix_1,20)
+PG <- c()
+for(i in netflix_1$rating){
+  if (i == "PG-13"){
+    PG <- c(PG,1)
+  }else{
+    PG <- c(PG,0)
+  }
+}
+netflix$PG_13 <- PG
+```
+
+c)  Write a command to calculate the average `duration` for "TV Show"s and "Movies". (5 points)
+
+```{r}
+library(tidyr)
+netflix$duration<-as.character(netflix$duration)
+netflix <- netflix %>% separate(duration,c("duration_time","time_unit")) 
+netflix$duration_time <- as.numeric(netflix$duration_time)
+netflix %>%
+  group_by(type) %>%
+  summarize(meanDuration = mean(duration_time, na.rm = T))
+
+```
+
+d)  Write a command to calculate the total number of movies in each `country` and the number of those movies that are rated PG-13. Return the result in descending order of number of PG-13 movies. (5 points)
+
+```{r}
+netflix %>% filter(rating == "PG-13") %>% 
+  group_by(country) %>% count(rating) %>%
+  arrange(desc(n))
+
+```
+
+# Problem 2
+
+The file "video_game_data.csv" contains a variety of data about video games.  Read this data into a tibble and convert it to be in "tidy" format.
+
+```{r}
+video <- read.csv(file= 'video_game_data.csv')
+video <- as_tibble(video)
+head(video,20)
+ 
+```
+
+```{r}
+library(tidyr)
+video <- pivot_wider(video,names_from = "details",values_from = "value")
+video
+```
+
+# Problem 3
+
+The file "orders.csv" contains the quantities of clothing items purchased by various companies.  Read this data into a tibble and then convert it to be in "tidy" format.
+
+```{r}
+orders <- read.csv(file= 'orders.csv')
+orders <- as_tibble(orders)
+head(orders,20)
+```
+```{r}
+orders <- pivot_longer(orders, c(Hat.Small, Hat.Medium, Hat.Large,
+                                 Gloves...Small,Gloves.Medium,Gloves...Large,
+                                 Shoes...Small,Shoes...Medium,Shoes...Large),values_to ="Number" ,names_to = "name_size")
+orders
+```
+
+# Problem 4
+
+The file 10_year_sales.xlsx contains weekly sales data for a 10 year period by city.  Note that there are 10 tabs in this file.  
+
+a)  Use the tidyverse read_excel function to read in each of these tabs and consolidate them into a single tibble that is in a tidy format.  
+
+```{r}
+library(readxl)
+library(purrr)
+library(dplyr)
+library(tibble)
+sale_2010<-read_excel('10_year_sales.xlsx', sheet = 1)
+sale_2011<-read_excel('10_year_sales.xlsx', sheet = 2)
+sale_2012<-read_excel('10_year_sales.xlsx', sheet = 3)
+sale_2013<-read_excel('10_year_sales.xlsx', sheet = 4)
+sale_2014<-read_excel('10_year_sales.xlsx', sheet = 5)
+sale_2015<-read_excel('10_year_sales.xlsx', sheet = 6)
+sale_2016<-read_excel('10_year_sales.xlsx', sheet = 7)
+sale_2017<-read_excel('10_year_sales.xlsx', sheet = 8)
+sale_2018<-read_excel('10_year_sales.xlsx', sheet = 9)
+sale_2019<-read_excel('10_year_sales.xlsx', sheet = 10)
+
+
+
+sale_2010$Year<-2010
+sale_2011$Year<-2011
+sale_2012$Year<-2012
+sale_2013$Year<-2013
+sale_2014$Year<-2014
+sale_2015$Year<-2015
+sale_2016$Year<-2016
+sale_2017$Year<-2017
+sale_2018$Year<-2018
+sale_2019$Year<-2019
+
+
+full_data<-list(sale_2010, sale_2011, sale_2012, sale_2013, sale_2014, sale_2015, sale_2016, sale_2017,
+                sale_2018, sale_2019)
+dd_last<-full_data %>% reduce(full_join)
+
+names<-c('month','day','Noblesville_price','Noblesville_quantity','Year','Bloomington_price'
+         ,'Bloomington_quantity','Muncie_price','Muncie_quantity','South Bend_price'
+         ,'South Bend_quantity','Fort Wayne_price','Fort Wayne_quantity')
+colnames(dd_last)<-names
+
+dd_last<-dd_last[-(which(dd_last$month == 'month')),]
+#dd_last<-unite(dd_last,c(month,day,Year),sep = '-',col = 'date')
+dd_last<-pivot_longer(dd_last, c('Noblesville_price','Noblesville_quantity','Bloomington_price',
+                       'Bloomington_quantity','Muncie_price','Muncie_quantity','South Bend_price',
+                       'South Bend_quantity','Fort Wayne_price','Fort Wayne_quantity'))
+dd_last<-separate(dd_last, name, c('city','type'),sep = '_')
+dd_last<-pivot_wider(dd_last, names_from = 'type', values_from = 'value')
+dd_last<-na.omit(dd_last)
+dd_last$price<-round(as.numeric(dd_last$price), 2)
+dd_last$quantity<-round(as.numeric(dd_last$quantity))
+dd_last<-as.tibble(dd_last)
+dd_last
+```
+
+b)  Generate a tibble showing the total revenue (price times quantity) for each city from the years 2015 through 2019.
+
+```{r}
+dd_last %>% filter(Year == c(2015:2019)) %>% group_by(city) %>%
+  summarise(proit = sum(price*quantity))
+  
+
+
+```
+
+# Problem 5 
+
+You are to use the tables found in "Orders - Data Integration.csv" and "Product Costs - Data Integration.csv" to generate a report of the total profit from each of your customers.  Perform the following steps:
+
+a)  Read in the two files and determine if either (or both) of the files are not in Tidy format.  (5 points)
+
+```{r}
+library(tidyr)
+orders_1 <- read.csv("Orders - Data Integration.csv")
+product <- read.csv("Product Costs - Data Integration.csv")
+orders_1 <- as_tibble(orders_1)
+product <- as_tibble(product)
+head(orders_1)
+head(product)
+```
+
+Summarize below which table(s) are not in Tidy format and why:
+
+Answer: The Product Costs - Data Integration" table is not in Tidy format because the column headers "2019 Cost" and "2020 Cost" contain values.*
+
+b)  If either table is not in Tidy format, correct it.  Also, convert the costs from character to numeric types. 
+
+```{r}
+
+product <- pivot_longer(product, c(X2019.Cost, X2020.Cost),values_to ="Cost" ,names_to = "Year")
+product$Cost <- as.numeric(product$Cost)
+
+product_new <- product %>%
+  separate(Year, c("X", "Year_cost"),sep = 1)
+product_last <- separate(product_new,Year_cost,into =c("Year.Purchased","tpye"))
+product_last<-product_last[,c(-2,-4)]
+class(product$Cost)
+product_last$Year.Purchased <- as.numeric(product_last$Year.Purchased)
+product_last
+```
+
+c)  Join the two tables (be careful which type of join to use) 
+
+```{r}
+new_table <- left_join(orders_1,product_last,by=c("Product.Code","Year.Purchased"))
+new_table
+
+```
+
+d)  Create a new column in the joined table that is equal to the total profit for that line item (note:  profit equals the price that you charge for an item minus the cost that you have to pay to get that item from your supplier)  (5 points)
+
+```{r}
+new_table$profit <- new_table$Quantity*(new_table$Unit.Price - new_table$Cost)
+head(new_table)
+
+
+```
+
+e)  Generate a table that contains the total profit received from each of your customers.  Print out that table in a nice format using the knitr::kable() function.  (5 points)
+
+```{r}
+
+knitr::kable(new_table %>% group_by(Customer) %>% summarize(sum(profit)))
+
+```
+
+f)  Extra credit:  Install the "formattable" library to display the "Customer Profit" column in your table in a currency format
+
+```{r}
+library(formattable)
+new_table$Customer_profit <- currency(new_table$profit,symbol = "$")
+head(new_table)
+
+```
+
+# Problem 6 
+
+For this problem, you are to use the tables found in files "Roster.csv", "ISE535 Spring 2021.csv", "ISE599 Fall 2020.csv", and "ISE535 Fall 2021.csv"
+
+Perform the following steps:
+
+a)  Read the four csv files into tibbles and combine them into a single table that is in tidy format (call it "gradebook"). Load the lubridate library and use it to convert the "Date of Birth" attribute to be a date type and covert the grade to a factor type.  (15 points)
+
+```{r}
+library(lubridate)
+Roster <- read.csv("Roster.csv",skip = 1)
+ISE535 <- read.csv("ISE535 Spring 2021.csv",skip=2)
+ISE559 <- read.csv("ISE599 Fall 2020.csv",skip = 2)
+ISE_fall <- read.csv("ISE535 Fall 2021.csv",skip = 2)
+```
+
+
+```{r}
+gradebook <- Roster %>% left_join(ISE535,ISE535,by=c("Student.ID"="Student.ID")) %>%
+  left_join(ISE559,ISE559,by=c("Student.ID"="Student.ID")) %>% 
+  left_join(ISE_fall,ISE_fall,by=c("Student.ID"="Student.ID")) 
+colnames(gradebook)[which(names(gradebook) == "Grade.x")] <- "ISE535_Spring_2021" 
+colnames(gradebook)[which(names(gradebook) == "Grade.y")] <- "ISE599_Fall_2020" 
+colnames(gradebook)[which(names(gradebook) == "Grade")] <- "ISE535_Fall_2021"
+
+gradebook$`ISE535_Spring_2021` <- as.factor(gradebook$`ISE535_Spring_2021`)
+gradebook$`ISE599_Fall_2020` <- as.factor(gradebook$`ISE599_Fall_2020`)
+gradebook$`ISE535_Fall_2021` <- as.factor(gradebook$`ISE535_Fall_2021`)
+
+gradebook$Date.of.Birth <- as.Date(gradebook$Date.of.Birth, format = "%m/%d/%Y")
+gradebook <- pivot_longer(gradebook, c(ISE535_Spring_2021, ISE599_Fall_2020,ISE535_Fall_2021),
+                          values_to ="Grade" ,names_to = "class")
+gradebook<-separate(gradebook,class,c('Class_name','Semester','Year' ))
+gradebook
+```
+
+b)  Add a column that contains the grade point value for the class (A = 4, B = 3, C = 2) and then use that column to display the GPA for each student.  Hint:  look at the Tidyverse case_when command.  (10 points)
+
+```{r}
+
+gradebook$grade_point <- case_when(gradebook[,8]=="A" ~ 4,
+                           gradebook[,8]=="B" ~ 3,
+                           gradebook[,8]=="C" ~ 2)
+gradebook<-na.omit(gradebook)
+gradebook %>%
+  group_by(Student.Name)%>%
+  summarize(GPA=mean(grade_point))
+```
+

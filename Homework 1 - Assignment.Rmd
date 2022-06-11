@@ -1,0 +1,157 @@
+---
+title: "Homework #1 Assignment"
+subtitle:  "ISE-535 Data Mining"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+*Due:  January 21, 2021*
+
+For this assignment (and all assignments in this class), you are to turn in your work as an R Markdown document, which is a great tool for producing documents that include the output of "chunks" of R code.  We will talk about R Markdown a little in an upcoming class, but it is very easy to do basic operations.  For this assignment, all you need to do is to replace the various sections that say "Insert R code here" with your R code that provides the solution to the problem and select "Knit - to PDF' from the menu in R Studio to generate a PDF file for submission.
+
+I would recommend that you print out the four-page R Markdown Reference Guide that is part of R Studio by selecting Help->cheatsheets->R Markdown Reference Guide, although for this assignment all you need to do is plug your chunks of R code into the assignment .Rmd file.
+
+# Problem 1  (50 points)
+
+a. Read the csv file "Cars Data.csv" into an R dataframe variable "cars" (5 points)
+
+```{r}
+#
+
+
+cars <- read.csv(file= 'Cars Data.csv')
+#
+```
+
+b.  Check the class and dimensions of cars. (5 points)
+
+```{r}
+#
+class(cars)
+dim(cars)
+#
+```
+
+c.  Display the second and fourth columns of the first 5 items in the dataframe (5 points)
+
+```{r}
+#
+head(cars[,c(2,4)],5)
+#
+```
+
+d)  Display the names of the columns in cars. (5 points)
+
+```{r}
+#
+colnames(cars)
+#
+```
+
+e)  Display the average number of cylinders in the cars dataframe (10 points)
+
+```{r}
+#
+mean(cars$Cylinders,na.rm = TRUE)
+#
+```
+
+f)  Add a new column to your dataframe called wt_len_ratio that is the weight (in pounds) divided by the wheelbase length (in inches) (10 points)
+
+```{r}
+#
+cars$wt_len_ratio <- cars$Weight..LBS./cars$Length..IN.
+head(cars)
+#
+```
+
+g)  Display the Make and Model of the car with the highest horsepower (10 points)
+
+```{r}
+#
+subset(cars, subset=cars$Horsepowe==max(cars$Horsepowe))[,1:2]
+#
+```
+
+# Problem 2  (50 points)
+
+A common metric of health is the Body Mass Index (BMI), which is calculated simply as the weight in kilograms divided by the height in meters squared ($BMI=kg/m^2$)
+
+a.  Create a function called `calculate_bmi()` that takes height in inches and weight in pounds as parameters and returns the BMI.  Use the conversions $\small inches*0.035=m$ and $\small pounds*0.753592=kg$.  Test the function with a height of 72" and a weight of 190 lbs.  (15 points)
+
+```{r}
+#
+calculate_bmi <- function(weight,height){
+  height <- height* 0.035
+  weight <- weight * 0.753592
+  BMI <- weight / height^2
+  return(BMI)
+}
+
+calculate_bmi(190,72)
+#
+```
+
+b.  (15 points)  General standard categories for BMI are given by:
+* BMI < 18.5:  Underweight
+* BMI 18.5-24.9:  Normal weight
+* BMI 25-29.9:  Overweight
+* BMI 30 or greater:  Obese
+
+Create a function called determine_weight_category that takes height in inches and weight in pounds as parameters and returns the category the person falls into.  Test your function with the  following values:  (15 points)
+    
+*  Height: 60" / Weight 160 lbs
+*  Height: 68" / weight 160 lbs
+*  Height 72" / weight 190 lbs
+
+```{r}
+#
+determine_weight_category <- function(weight,height){
+  BMI <- calculate_bmi(weight,height)
+  if (BMI <= 18.5) {
+    return('Underweight')
+  }
+  if (BMI<= 24.9){
+    return('Normal weight')
+  }
+  if (BMI <= 29.9){
+    return('Overweight')
+  }
+  else(return('Obese'))
+}
+
+determine_weight_category(160,60)
+determine_weight_category(160,68)
+determine_weight_category(190,72)
+#
+```
+
+c.  You want to create a plot of the BMI for a 180-pound individual at various heights from 60" to 84" (in one-inch increments).  Create a vector 'heights' to hold the various heights from 60 to 84 and write a for-loop to call your `calculate_bmi()` function for each value of heights.  Then, use these two vectors to plot a chart showing the relationship (using the Matlab "plot" function).  Give the chart a title of 'BMI at Various Heights for a 180-Pound Individual' and label the X and Y axes.  (15 points)
+
+```{r}
+#
+BMI <- c()
+heights <- c(60:84)
+for(i in heights){
+  BMI <- c(BMI, calculate_bmi(180,i))
+}
+plot(heights,BMI, main="BMI at Various Heights for a 180-Pound Individual",
+     xlab='Height', ylab="BMI",type = "l",col="red")
+#
+```
+
+d.  Repeat the question of part c without using a for-loop by replacing the loop with a single R statement. (5 points)
+
+```{r}
+#
+plot(c(60:84),calculate_bmi(180,c(60:84)), main="BMI at Various Heights for a 180-Pound Individual",
+     xlab='Height', ylab="BMI",type = "l",col="red")
+#
+```
+
+

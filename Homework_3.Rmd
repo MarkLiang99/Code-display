@@ -1,0 +1,359 @@
+---
+title: "Homework3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(gridExtra)
+library(prettyR)
+library(ggcorrplot)
+```
+
+
+
+```{r}
+data <- read_excel("Absenteeism_at_work.xls")
+data
+```
+
+```{r}
+summarize_numeric = function(dataset) {
+  
+  dataset = select_if(dataset, is.numeric)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+           'Mean' = colMeans(dataset, na.rm = TRUE),
+           'Min' = apply(dataset, 2, function (x) min(x, na.rm = TRUE)),
+           'Max' = apply(dataset, 2, function (x) max(x, na.rm = TRUE)),
+           'SD' = apply(dataset, 2, function (x) sd(x, na.rm = TRUE))
+    )
+  summary.table
+}
+```
+
+```{r}
+summarize_character = function(dataset) {
+  
+  dataset = select_if(dataset, is.character)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+    )
+  summary.table
+}
+```
+
+```{r}
+summarize_factor = function(dataset) {
+  
+  dataset = select_if(dataset, is.factor)
+  summary.table = data.frame(Attribute = names(dataset))
+  
+  summary.table = summary.table %>% 
+    mutate('Missing Values' = apply(dataset, 2, function (x) sum(is.na(x))),
+           'Unique Values' = apply(dataset, 2, function (x) length(unique(x))),
+           'Mode' = apply(dataset, 2, function (x) mode(x)),
+    )
+  summary.table
+}
+```
+
+
+```{r}
+numeric_data <- summarize_numeric(data)
+numeric_data
+```
+
+```{r}
+char_data <- summarize_character(data)
+char_data
+```
+
+
+
+```{r}
+summarize_factor(data)
+```
+
+
+```{r}
+colnames(data)
+```
+
+
+```{r}
+data <- as_tibble(data)
+data <- data %>% mutate(`Reason for absence` = as.factor(
+  case_when(
+    `Reason for absence` == 1 ~ 'Certain infectious and parasitic diseases',
+    `Reason for absence` == 2 ~ 'Neoplasms',
+    `Reason for absence` == 3 ~ 'Diseases of the blood and blood-forming organs and certain disorders involving the immune mechanism',
+    `Reason for absence` == 4 ~ 'Endocrine, nutritional and metabolic diseases',
+    `Reason for absence` == 5 ~ 'Mental and behavioural disorders',
+    `Reason for absence` == 6 ~ 'Diseases of the nervous system',
+    `Reason for absence` == 7 ~ 'Diseases of the eye and adnexa ',
+    `Reason for absence` == 8 ~ 'Diseases of the ear and mastoid process ',
+    `Reason for absence` == 9 ~ 'Diseases of the circulatory system',
+    `Reason for absence` == 10 ~ 'Diseases of the respiratory system',
+    `Reason for absence` == 11 ~ 'Diseases of the digestive system',
+    `Reason for absence` == 12 ~ 'Diseases of the skin and subcutaneous tissue',
+    `Reason for absence` == 13 ~ 'Diseases of the musculoskeletal system and connective tissue',
+    `Reason for absence` == 14 ~ 'Diseases of the genitourinary system',
+    `Reason for absence` == 15 ~ 'Pregnancy, childbirth and the puerperium',
+    `Reason for absence` == 16 ~ 'Certain conditions originating in the perinatal period',
+    `Reason for absence` == 17 ~ 'Congenital malformations, deformations and chromosomal abnormalities ',
+    `Reason for absence` == 18 ~ 'Symptoms, signs and abnormal clinical and laboratory findings, not elsewhere classified',
+    `Reason for absence` == 19 ~ 'Injury, poisoning and certain other consequences of external causes',
+    `Reason for absence` == 20 ~ 'External causes of morbidity and mortality',
+    `Reason for absence` == 21~ 'Factors influencing health status and contact with health services.',
+    `Reason for absence` == 22~ 'patient follow-up',
+    `Reason for absence` == 23~ 'medical consultation',
+    `Reason for absence` == 24~ 'blood donation',
+    `Reason for absence` == 25~ 'laboratory examination',
+    `Reason for absence` == 26~ 'unjustified absence',
+    `Reason for absence` == 27~ 'physiotherapy',
+    `Reason for absence` == 28~ 'dental consultation',
+    `Reason for absence` == 0~ 'No excause')
+))
+```
+
+
+
+```{r}
+data <- data %>% mutate(`Day of the week` = as.factor(
+  case_when(
+    `Day of the week` == 2~ 'Monday',
+    `Day of the week` == 3~ 'Tuesday',
+    `Day of the week` == 4~ 'Wednesday',
+    `Day of the week` == 5~ 'Thursday',
+    `Day of the week` == 6~ 'Friday'
+  )
+  ))
+```
+
+
+```{r}
+data <- data %>% mutate(`Education` = as.factor(
+  case_when(
+    `Education` == 1~ 'high school',
+    `Education` == 2~ 'graduate',
+    `Education` == 3~ 'postgraduate',
+    `Education` == 4~ 'master and doctor'
+  )
+  ))
+```
+
+
+```{r}
+data <- data %>% mutate(`Social drinker` = as.factor(
+  case_when(
+    `Social drinker` == 1~ 'Yes',
+    `Social drinker` == 0~ 'No'
+  )
+  ))
+```
+
+
+
+```{r}
+data <- data %>% mutate(`Social smoker` = as.factor(
+  case_when(
+    `Social smoker` == 1~ 'Yes',
+    `Social smoker` == 0~ 'No'
+  )
+  ))
+```
+
+
+```{r}
+data <- data %>% mutate(`Disciplinary failure` = as.factor(
+  case_when(
+    `Disciplinary failure` == 1~ 'Yes',
+    `Disciplinary failure` == 0~ 'No'
+  )
+  ))
+```
+
+
+```{r}
+colnames(data %>% select_if(is.factor))
+```
+
+
+```{r}
+colnames(data %>% select_if(is.numeric))
+```
+
+
+
+```{r}
+colnames(data %>% select_if(is.character))
+```
+
+
+
+```{r}
+ggplot(data) + geom_bar(aes(x=Education))
+```
+
+
+```{r}
+ggplot(data) + geom_bar(aes(x=`Day of the week`))
+```
+
+
+```{r}
+ggplot(data) + geom_bar(aes(x=`Social drinker`))
+```
+
+```{r}
+ggplot(data) + geom_bar(aes(x=`Social smoker`))
+```
+
+```{r}
+ggplot(data) + geom_bar(aes(x=`Reason for absence`))
+```
+
+```{r}
+ggplot(data) + geom_bar(aes(x=`Disciplinary failure`))
+```
+
+```{r}
+summarize_factor(select(data, `Disciplinary failure`, `Education`,`Social drinker`,`Social smoker`))
+```
+
+
+
+
+
+```{r}
+ggcorrplot(cor(data %>% select(colnames(data %>% select_if(is.numeric)))))
+```
+
+
+```{r}
+colnames(data %>% select_if(is.numeric))
+```
+
+
+
+```{r}
+p1 <- ggplot(data) + geom_histogram(aes(x=`Month of absence`))
+p1
+
+```
+
+```{r}
+p2 <- ggplot(data) + geom_histogram(aes(x=`Seasons`))
+grid.arrange(p1, p2, nrow=1)
+```
+
+
+```{r}
+i1<- ggplot(data) + geom_histogram(aes(x=`Distance from Residence to Work`))
+```
+
+
+```{r}
+i2<- ggplot(data) + geom_histogram(aes(x=`Age`))
+```
+
+```{r}
+i3<- ggplot(data) + geom_histogram(aes(x=`Son`))
+```
+
+```{r}
+i4<- ggplot(data) + geom_histogram(aes(x=`Pet`))
+```
+
+```{r}
+i5<- ggplot(data) + geom_histogram(aes(x=`Weight`))
+```
+
+```{r}
+i6 <- ggplot(data) + geom_histogram(aes(x=`Height`))
+```
+
+
+```{r}
+i7 <- ggplot(data) + geom_histogram(aes(x=`Body mass index`))
+```
+
+```{r}
+i8 <- ggplot(data) + geom_histogram(aes(x=`Transportation expense`))
+grid.arrange(i1, i2, i3, i4, i5,i6,i7,i8, nrow=4)
+```
+
+```{r}
+w1 <- ggplot(data) + geom_histogram(aes(x=`Service time`))
+```
+
+```{r}
+w2 <- ggplot(data) + geom_histogram(aes(x=`Work load Average/day`))
+```
+
+```{r}
+w3 <- ggplot(data) + geom_histogram(aes(x=`Hit target`))
+grid.arrange(w1, w2, w3, nrow=2)
+```
+
+```{r}
+ggplot(data) + geom_histogram(aes(x=`Absenteeism time in hours`))
+
+```
+
+```{r}
+summarize_numeric(select(data, `Month of absence`, `Seasons`,`Transportation expense`,`Distance from Residence to Work`,`Service time`,`Age`,`Work load Average/day`,`Hit target`,`Son`,`Pet`,`Weight`,`Body mass index`,`Absenteeism time in hours`))
+```
+
+```{r}
+colnames(data %>% select_if(is.numeric))
+```
+
+```{r}
+g1 = ggplot(data) + geom_point(aes(y= `Absenteeism time in hours`, x=Son))
+g2 = ggplot(data) + geom_point(aes(y= `Absenteeism time in hours`, x=Height))
+g3 = ggplot(data) + geom_point(aes(y= `Absenteeism time in hours`, x=`Distance from Residence to Work`))
+g4 = ggplot(data) + geom_point(aes(y= `Absenteeism time in hours`, x=Age))
+g5 = ggplot(data) + geom_point(aes(y= `Absenteeism time in hours`, x=`Service time`))
+grid.arrange(g1, g2, g3, g4, g5, nrow=3)
+```
+
+```{r}
+z1 = ggplot(data) + geom_boxplot(aes(y= `Absenteeism time in hours`, x=`Day of the week`))
+z2 = ggplot(data) + geom_boxplot(aes(y= `Absenteeism time in hours`, x=`Disciplinary failure`))
+z3 = ggplot(data) + geom_boxplot(aes(y= `Absenteeism time in hours`, x=`Education`))
+z4 = ggplot(data) + geom_boxplot(aes(y= `Absenteeism time in hours`, x=`Social drinker`))
+z5 = ggplot(data) + geom_boxplot(aes(y= `Absenteeism time in hours`, x=`Social smoker`))
+grid.arrange(z1, z2, z3, z4, z5, nrow=3)
+```
+
+```{r}
+colnames(data %>% select_if(is.factor))
+```
+
+```{r}
+g1 = ggplot(data) + geom_bar(aes(x=`Day of the week`, fill = `Disciplinary failure`), position = "fill") + labs(y = "Percent")
+g2 = ggplot(data) + geom_bar(aes(x=Education, fill = `Disciplinary failure`), position = "fill") + labs(y = "Percent")
+g3 = ggplot(data) + geom_bar(aes(x=`Social drinker`, fill = `Disciplinary failure`), position = "fill") + labs(y = "Percent")
+g4 = ggplot(data) + geom_bar(aes(x=`Social smoker`, fill = `Disciplinary failure`), position = "fill") + labs(y = "Percent")
+grid.arrange(g1, g2, g3, g4, nrow=2)
+```
+
+```{r}
+
+```
+

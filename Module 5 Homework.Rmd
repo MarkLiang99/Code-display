@@ -1,0 +1,86 @@
+---
+title: 'Homework #5'
+author: "Haotian Liang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+For this assignment (and all assignments in this class), you are to turn in your work as an R Markdown document.  Submit your solutions to GradeScope in PDF format.
+
+
+# Problem 1
+
+For this problem we are going to use the following dataset of sales of season passes to an amusement park in response to advertising offers.  The dataset contains a yes/no attribute indicating whether or not the recipient of the offer purchased a pass (Pass), an attribute (Promo) indicating whether or not the offer was part of a "bundle" that included parking, and an attribute indicating how the offer was delivered (Channel).
+
+```{r}
+season_pass = read.csv("season_pass.csv")
+season_pass$Channel = factor(season_pass$Channel, levels=c("Email", "Mail", "Park"))
+season_pass$Promo = factor(season_pass$Promo, levels=c("NoBundle", "Bundle"))
+season_pass$Pass = factor(season_pass$Pass, levels=c("NoPass", "YesPass"))
+head(season_pass)
+summary(season_pass)
+```
+
+1A) We first want to determine if making the offer as part of a bundle increases the odds that the customer will purchase the pass.  Construct a simple logistic regression model (one predictor) to test this.  How much does including the offer in a bundle increase the odds that it will be purchased?
+
+```{r}
+library(tidyverse)
+# Change Channel column  text to number 1 represent Email,2 represent Mail, 3 represent Park.
+season_pass = season_pass %>% mutate('Channel_1' = case_when(Channel == "Email" ~ 1, 
+                                                            Channel == "Mail" ~ 2, 
+                                                            Channel == "Park" ~ 3))
+
+
+# Change Promo column  text to number 0 represent No Bundle,1 represent Bundle
+season_pass = season_pass %>% mutate('Promo_1' = case_when(Promo == "NoBundle" ~ 0, 
+                                                            Promo == "Bundle" ~ 1))
+
+
+
+#Change Pass column  text to number 0 represent No Pass,1 represent Yes Pass.
+season_pass = season_pass %>% mutate('Pass_1' = case_when(Pass == "NoPass" ~ 0, 
+                                                          Pass == "YesPass" ~ 1))
+season_pass <- season_pass[-c(1:3)]
+head(season_pass)
+```
+
+```{r}
+lm.fit <- lm(Pass_1 ~ Promo_1, data = season_pass)
+
+summary(lm.fit)
+```
+```{r}
+Intercept <- 0.4520918
+slop <- 0.0968927
+with_b_buy <- exp(Intercept+slop*1)/(1+exp(Intercept+slop*1))
+with_not_b_buy <- exp(Intercept+slop*0)/(1+exp(Intercept+slop*0))
+difference <- with_b_buy-with_not_b_buy
+difference
+```
+
+  - The odds increase 0.02276349 by offer an bundle.
+
+1B)  Now we would like to determine the effect of the "channel" which the offer is delivered through (email, mail, or in park).  Construct a multiple logistic regression model to test this.  What does this model tell us about the influence of the channel and of including it in a bundle?
+
+```{r}
+lm.fit_b <- lm(Pass_1 ~ Promo_1 + Channel_1, data = season_pass)
+
+summary(lm.fit_b)
+library(car)
+vif(lm.fit_b)
+# both Promo_1 and Channel_1 under 5, we can keep them all. 
+```
+
+  - From the module we can know there is negative slop of Promo,it means if there is a bundle, it will decrease the possibility of customer to perches the pass. For Channel, there is a positive slop, it means people in park have the most possibility to perches the pass, mail is the second, email is the last.
+
+1C) Is there a statistically significant interaction effect between Promo and Channel?
+
+```{r}
+lm.fit_c <- lm(Pass_1 ~ Promo_1 + Channel_1 + Promo_1:Channel_1 , data = season_pass)
+
+summary(lm.fit_c)
+```
+  - Because of the P value of the Promo_1:Channel_1 is 4.69e-07 is way less than 0.05, we can say there is a significant interaction effect between Promo and Channel.

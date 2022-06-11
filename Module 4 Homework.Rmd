@@ -1,0 +1,458 @@
+---
+title: 'Module 4 Homework'
+author: "Haotian Liang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lmPerm)
+library(ggfortify)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this assignment (and all assignments in this class), you are to turn in your work as an R Markdown document.  Submit both the .rmd and .pdf (or .html) files.
+
+# Problem 1
+
+A restaurant owner wants to better understand his customers and the sizes of their checks (cost of the meal) and collected the data in the file restaurant_checks.csv that represents a sampling of the cost of each restaurant meal over the course of several weeks (bill).
+
+a)  Looking at the dataset, what is the sample mean for the check amount (bill)?
+
+```{r}
+restaurant = read_csv('restaurant_checks.csv', col_types = cols(Bill = col_number()))
+restaurant
+```
+```{r}
+sample_mean=mean(restaurant$Bill)
+sample_mean
+```
+
+b)  Using classical statistics, what is the standard error for the sample mean?
+
+```{r}
+std_err_mean = sd(restaurant$Bill)/sqrt(length(restaurant$Bill))
+std_err_mean
+```
+
+c)  Now, estimate the standard error using a bootstrap technique. 
+
+```{r}
+library(boot)
+stat_fun = function(x, idx) mean(x[idx])
+boot_obj = boot(restaurant$Bill, R = 1000, statistic = stat_fun)
+boot_obj
+```
+
+
+e)  Using classical statistics, what is the 90% confidence interval for the sample mean?   Since there are well over 30 samples, you may use the Z-Statistic to calculate this interval
+
+```{r}
+ci90 = numeric(2)
+ci90[1] = sample_mean - 1.645*std_err_mean
+ci90[2] = sample_mean + 1.645*std_err_mean
+ci90
+```
+
+
+f)  Using bootstrapping, what is the 90% confidence interval for the sample mean? 
+
+```{r}
+sample_means = boot_obj$t
+quantile(sample_means, probs = c(0.05, 0.95))
+
+```
+
+
+g)  What is the sample median value for the restaurant bills?
+
+```{r}
+median(restaurant$Bill)
+```
+
+h)  What is the standard error of the sample median value for the restaurant bills?
+
+```{r}
+SE_median = 1.2533 *std_err_mean
+SE_median
+```
+
+i)  What is the 90% confidence interval for the sample median value for the restaurant bills?
+
+```{r}
+Mboot = boot(restaurant$Bill,function(x,idx) median(x[idx]),R=10000)
+
+boot.ci(Mboot,conf = 0.90)
+
+```
+
+
+\newpage
+# Problem 2
+
+After reviewing this data, the restaurant owner wanted to understand if customers who ate early spent more or less than customers who ate later.  The file restaurant_checks_2.csv contains restaurant check amounts as well as information about whether the customer was seated "early" in the evening (between 5:30PM and 7:30PM) or "late" in the evening (after 7:30PM).
+
+a)  Read in the file and create a side-by-side boxplot to visualize the ranges of the two groups of customers.
+
+```{r}
+restaurant_2 = read_csv('restaurant_checks_2.csv',show_col_types = FALSE)
+restaurant_2
+```
+```{r}
+ggplot(restaurant_2) + geom_boxplot(aes(y= `Bill`, x=`Time`))
+```
+
+
+b)  Formulate a one-tailed hypothesis test to determine if there is a statistically significant difference between the average check of the early customers and the late customers.  What are the null and alternate hypotheses.
+
+  - The null hypotheses there is no a statistically significant difference between the average check of the early customers and the late customers.
+  
+  - The alternate there is no a statistically significant difference between the average check of the early customers and the late customers.
+  
+c)  Using classical statistics techniques, conduct the hypothesis test using an alpha of 0.05.  What is your conclusion?
+
+Because of p-value = 0.0004003, P-value is less than alpha 0.05, we can reject the null hypothesis.customer's bill who come late is more than customer who come early
+
+```{r}
+t.test(Bill~Time, data=restaurant_2, alternative="less")
+```
+
+D)  Using permutation testing techniques, conduct the hypothesis test using an alpha of 0.05.  What is your conclusion?
+
+According to the permutation testing, Approximately 0.03% of the time, differences between randomly drawn samples is greater than the difference between the customer who come early and late. I think there is no significant difference between customer who come early or late
+
+```{r}
+perm_fun <- function(x, nA){
+  n = length(x)
+  nB = n - nA
+  idx_b <- sample(1:n, nB)
+  idx_a <- setdiff(1:n, idx_b)
+  perm_diffs <- mean(x[idx_b]) - mean(x[idx_a])
+  return(perm_diffs)
+}
+```
+
+```{r}
+set.seed(123)
+Time_counts = restaurant_2 %>% group_by(Time) %>% summarize("Count" = n())
+Time_counts  
+
+perm_diffs <- rep(0, 10000)
+for (i in 1:10000) {
+  perm_diffs[i] = perm_fun(restaurant_2$Bill, Time_counts$Count[1])
+}
+```
+```{r}
+head(perm_diffs)
+```
+
+```{r}
+mean_times = restaurant_2 %>% group_by(Time) %>% summarise(Mean = mean(Bill))
+mean_diff = mean_times$Mean[2] - mean_times$Mean[1]
+mean(perm_diffs > mean_diff)
+```
+
+E) Create a histogram of your permutations differences and draw a vertical dashed line indicating where the actual difference was between average of the two groups of diners
+
+```{r}
+ggplot(as_tibble(perm_diffs)) + geom_histogram(aes(x=value)) + 
+  labs(title = "Customer come early and late") + 
+  geom_vline(xintercept = mean_diff, linetype="dashed", size = 0.8) +
+  geom_text(aes(x=mean_diff, label = "\nObserved Difference"), y = 700, angle = 90)
+```
+
+\newpage
+# Problem 3
+
+A)  Now, the restaurant owner wants to look for check differences based on a narrower time range.  The restaurant is open for a total six hours.  The restaurant owner now takes a new sample and records which hour (1 through 6) the customer is served.  Read in this new file (restaurant_checks_3.csv) and create a side-by-side boxplot to visualize the check ranges of the six groups of customers
+
+```{r}
+restaurant_3 = read_csv('restaurant_checks_3.csv',col_types = cols(Bill = col_number(),Hour = col_number()))
+restaurant_3
+```
+
+```{r}
+ggplot(restaurant_3) + geom_boxplot(aes(y= `Bill`, x=`Hour`,group=Hour))
+```
+
+B)  The owner has asked you to run t-tests on each pair of hours to determine statistical significance between pairs of hours.  Why do you tell him that is a bad idea?
+
+  - The T-tests is One-way test, it is not accurate when there are too many group.
+
+C)  Formulate a hypothesis test for differences of means among these six categories.  What are the null and alternate hypotheses?
+
+  - The null hypotheses is that customer's bill is no differences of means among these six categories.
+  - The alternate hypotheses is that customer's bill is differences of means among these six categories.
+  
+D)  Conduct the hypothesis test using traditional statistical techniques.  What is your conclusion?
+
+I choose the F-test fro the traditional statistical techniques. We can say we will reject the null hypothesis.
+
+```{r}
+c= as.factor(restaurant_3$Hour)
+summary(aov(Bill~c, data = restaurant_3))
+```
+
+E)  Conduct the hypothesis test using computational techniques.  What is your conclusion?
+
+I choose the permutation test fro the computational statistical techniques. The P-value of this test is 0.8636 which is greater than 0.05. We can say we will reject the null hypothesis.
+
+
+```{r}
+library(lmPerm)
+summary(aovp(Bill~c,data = restaurant_3))
+```
+
+\newpage
+# Problem 4  
+
+Now, the restaurant owner is interested in analyzing the proportion of restaurant checks that include a purchase of alcohol (wine or cocktails) because alcohol is much more profitable than food for him.  For his first analysis, he will analyze the percentages during the early and late dining periods (used in Problem 2).  He collected this data which is provided in the file restaurant_checks_4.csv
+
+A)  Formulate the hypothesis test and state the null and alternate hypotheses
+
+  - The null hypotheses is that alcohol orders is unrelated with customer who come early or late.
+  - The alternate hypotheses is that alcohol orders is related with customer who come early or late.
+
+B)  Read in the dataset and create a tibble that summarizes the counts of checks that include alcohol (and those that do not) for two time intervals.  It should be a 2x2 contingency table with the first column being Time.  Include columns for the counts of YES and NO (meals that include alcohol), the total counts for the Early and Late diners, and the proportion of Early and Late diners that purchased alcohol.
+
+```{r}
+restaurant_4 = read_csv('restaurant_checks_4.csv',show_col_types = FALSE)
+restaurant_4
+```
+
+
+```{r}
+ac <- restaurant_4 %>% group_by(Time) %>% filter(`Included alcohol?`=='Yes') %>% 
+  summarize("Yes" = n())
+No <- restaurant_4 %>% group_by(Time) %>% filter(`Included alcohol?`=='No') %>% 
+  summarize("No" = n())
+ac$'No' <- No$No
+new_ac <- matrix( nrow=2, ncol=2)
+dimnames(new_ac) <- list(unique(ac$Time))
+new_ac[,1]<- ac$Yes
+new_ac[,2]<- ac$No
+new_ac
+```
+
+C)  Conduct the hypothesis test using a classical statistics approach.  How do you interpret this result?
+we can reject the null hypothesis
+
+```{r}
+chisq.test(new_ac, simulate.p.value = FALSE)
+
+```
+
+
+D)  Conduct the hypothesis test using a computational statistics approach.  How do you interpret this result?
+we can reject the null hypothesis.
+
+```{r}
+chisq.test(new_ac, simulate.p.value = TRUE)
+```
+
+\newpage
+# Problem 5
+
+a)  For this homework, we will be performing basic time series analysis on daily COVID case data for Los Angeles County.  Read in the file "covid19cases_test.csv" and create a tibble "LA_covid_cases" that consist of only the observations for Los Angels County and only the variables "date" and "cases".  Display the first 10 rows of this tibble.
+
+```{r}
+covid19cases = read_csv('covid19cases_test.csv',show_col_types = FALSE)
+covid19cases
+```
+
+```{r}
+LA_covid_cases <- covid19cases %>% filter(area == "Los Angeles") %>% select(date,cases)
+is.na(LA_covid_cases$date)
+LA_covid_cases <- na.omit(LA_covid_cases)
+head(LA_covid_cases,10)
+```
+
+b)  Create a ggplot line plot of this time series.
+
+```{r}
+ggplot(LA_covid_cases)+ geom_line(aes(x=date, y=`cases`))
+```
+
+c)  Write an R function called "moving_average" which takes two parameters - a time series and the number of lags.  Use this function to create two new columns in your LA_covid_cases tibble - one with a four-period moving average and one with a twelve-period moving average.  Create a ggplot line plot containing both of these moving average time series.  For full credit, be sure to include a plot title and to label the X and Y axes.
+
+```{r}
+moving_average <- function(x,k){
+  x$k <- NA
+  B <- nrow(x)-k
+  for (i in 1:B){
+    b <- i+(k-1)
+    x$k[i+k]=mean(x$cases[i:b])
+  }
+  return(x)
+}
+
+four_LA_covid_cases <- moving_average(LA_covid_cases,4)
+six_LA_covid_cases  <- moving_average(LA_covid_cases,6)
+LA_covid_cases$four_period <- four_LA_covid_cases$k
+LA_covid_cases$six_period <- six_LA_covid_cases$k
+LA_covid_cases[is.na(LA_covid_cases)] <- 0
+LA_covid_cases
+
+```
+
+
+```{r}
+pl <- ggplot(LA_covid_cases , aes(x = date))
+pl <- pl + geom_line(aes(y = cases, color = "cases"), group = 1)
+pl <- pl + geom_line(aes(y = four_period, color = "MA4"),group = 1)
+pl <- pl + geom_line(aes(y = six_period, color = "MA6"), group = 1)
+pl <- pl +  theme_minimal()
+pl <- pl + labs(title ="Moving averages")
+pl <- pl + labs(cases="Prices") +labs(y = "cases", x = "date")
+pl
+```
+
+d)  Write an R function called "exp_smoothing" which takes two parameters - a time series and the parameter "alpha".  Use this function to create two new columns in your LA_covid_cases tibble - one with an exponential smoothing using an alpha of 0.2 and one with an alpha of 0.8.  Create a ggplot line plot containing both of these smoothed time series.  For full credit, be sure to include a plot title and to label the X and Y axes.
+
+```{r}
+exp_smoothing <- function(x,alpha){
+  x<- x$cases
+  s <- numeric(length(x))
+  s[1] <- NA
+  for (i in seq_along(s)+1){
+    if (i == 2){
+      s[i] <- alpha*x[i] + (1-alpha)*x[1]
+    }else{
+      s[i] <- alpha * x[i] + (1-alpha)*s[i-1]
+    }
+  }
+  s[1:length(s)-1]
+}
+
+
+LA_covid_cases <- covid19cases %>% filter(area == "Los Angeles") %>% select(date,cases)
+is.na(LA_covid_cases$date)
+LA_covid_cases <- na.omit(LA_covid_cases)
+
+LA_covid_cases$Alpha_0.2 <- exp_smoothing(LA_covid_cases,0.2)
+LA_covid_cases$Alpha_0.8 <- exp_smoothing(LA_covid_cases,0.8)
+LA_covid_cases
+
+```
+
+```{r}
+LA_covid_cases[is.na(LA_covid_cases)] <- 0
+pl <- ggplot(LA_covid_cases , aes(x = date))
+pl <- pl + geom_line(aes(y = cases, color = "cases"), group = 1)
+pl <- pl + geom_line(aes(y = Alpha_0.2, color = "0.2"),group = 1)
+pl <- pl + geom_line(aes(y = Alpha_0.8, color = "0.8"), group = 1)
+pl <- pl +  theme_minimal()
+pl <- pl + labs(title ="exp_smoothing")
+pl <- pl + labs(cases="Prices") +labs(y = "cases", x = "date")
+pl
+```
+
+
+1e)  Create a tibble containing the MSE, MAD, and MAPE for each of the four smoothed time series. Remember that the smoothed value at time t becomes the forecast for time t+1.
+
+```{r}
+mad(LA_covid_cases$cases)
+```
+
+\newpage
+# Problem 6
+
+The file ratings.txt contains ratings of cities regarding their quality of life.  The data consists of nine attributes (from left to right starting with the first column):
+  - Climate, Housing, Health Care, Crime, Transportation, Education, Arts, Recreation, and Economics.
+  - In general, the higher the number the better, except for "Crime" (higher is worse) and "Housing" (which represents the relative cost of housing, higher is worse)
+  
+A)  Read the text file into a Tibble and create appropriate column names.  Display the resulting Tibble.
+
+```{r}
+ratings = read.table('ratings.txt')
+ratings <- as_tibble(ratings)
+colnames(ratings) <- c('Climate', 'Housing', 'Health_Care', 'Crime',
+                       'Transportation', 'Education', 'Arts', 'Recreation', 'Economics','rating')
+ratings <- ratings[,c(10, 1:9)]
+ratings
+```
+
+B) Scale the variables and display a correlation matrix (using the ggcorrplot function)
+
+```{r}
+library(ggcorrplot)
+ggcorrplot(cor(ratings),hc.order = TRUE, lab = TRUE)
+```
+C)  Perform an PCA and create a Scree chart.  Based on this chart, how many principal components should be used in subsequent analyses?
+
+There are two principal components should be used which are PC1 and PC2.
+
+```{r}
+pca_ratings_scaled = as_tibble(scale(ratings))
+ra_corr_dataset <- prcomp(pca_ratings_scaled %>% select(Climate:Economics))
+ra_corr_dataset
+```
+
+```{r}
+summary(ra_corr_dataset)
+```
+
+```{r}
+screeplot(ra_corr_dataset)
+```
+
+
+D) View the PCA loadings and provide an interpretation for the first two principal components.
+
+The first principal component is strongly correlated. The first principal component increases with increasing Arts, Health, Transportation and Housing scores. If one increases, then the remaining ones tend to increase as well.
+
+The second principal component increases with only one of the values, decreasing Housing This component can be viewed as a measure of how this location housing price.
+```{r}
+loadingsc_1 <- ra_corr_dataset$rotation[,1]
+sort(loadingsc_1,decreasing = TRUE)
+loadingsc_2 <- ra_corr_dataset$rotation[,2]
+sort(loadingsc_2,decreasing = TRUE)
+```
+
+E)  Dispaly a biplot (using the autoplot function)
+
+```{r}
+plot(ra_corr_dataset, type="l")
+autoplot(ra_corr_dataset, loadings.label = TRUE)
+```
+
+\newpage
+# Problem 7
+
+Now, we will use Exploratory Factor Analysis on the same ratings dataset.  
+
+A)  Use the nScree function to get estimates of the optimal number of factors to use (use the default uncorrelated factors).  How do you interpret the results?
+
+There are two answer say there are three underlying factor, and there are two of four says there is one underlying factor.
+
+```{r}
+library(nFactors)
+nScree(as.data.frame(ratings %>% select(Climate:Economics)))
+```
+
+B)  Perform EFA using one, two, and three factors and display the results.
+
+```{r}
+factanal(ratings %>% select(Climate:Economics), factors = 1)
+```
+
+```{r}
+factanal(ratings %>% select(Climate:Economics), factors = 2)
+```
+
+```{r}
+factanal(ratings %>% select(Climate:Economics), factors = 3)
+```
+
+C)  How would you interpret the three factors that are derived as part of your last analysis.
+
+For the factor 1, Health_Care, Arts,Transportation and Education are high positive correlated.
+
+For the factor 2, Housing, Recreation and Climate are high positive correlated.
+
+For the factor 3, Crime is high positive correlated.
+

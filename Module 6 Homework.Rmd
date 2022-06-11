@@ -1,0 +1,112 @@
+---
+title: 'Module 6 Homework'
+author: "Haotian Liang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+For this assignment, you are to create your solutions as an R Markdown document and submit the PDF file to GradeScope.
+
+# Problem 1
+
+Below is a partition of a two-dimensional partition space:
+
+```{r, echo=FALSE, out.with = '100%', fig.align="center"}
+knitr::include_graphics("Partition_Space.png")
+```
+
+a)  Draw below the tree corresponding to this partition space.  The exact format of the tree is not necessary, but be sure to clearly label each branch and to include the predicted results at each leaf node. 
+
+```{r, echo=FALSE, out.with = '100%', fig.align="center"}
+knitr::include_graphics("p1.A.jpg")
+```
+
+b)  What is the misclassification rate for this classification tree? 
+* *Misclassification rate = 21.42%*
+
+c)  Treating the "A" outcome as a "negative" test result and the B outcome as a "positive", draw the confusion matrix for this classification tree below:  (10 points)
+
+```{r, echo=FALSE, out.with = '100%', fig.align="center"}
+knitr::include_graphics("p2.A.jpg")
+```
+
+# Problem 2
+
+For this problem, we will use the r packages rpart and rpart.plot.  We will be using a subset of the famous Titanic dataset which contains a variety of information on passengers that were on that famous ship when it sunk in the Atlanitic Ocean after hitting an iceberg in 1912.  Start by loading the file "Titanic.csv" into a Tibble.
+
+a)  Load the Titanic dataset into a tibble and convert the "Survived", "Pclass", and "Sex" attributes into factors.  What is the probability that a female that was traveling in first class survived?  How about a female in second class?
+
+  - *Probability a female in first class survived*
+  0.9680851
+
+```{r}
+library(rpart)
+library(rpart.plot)
+Titanic = read_csv("Titanic.csv")
+Titanic = Titanic %>% mutate(Survived = as.factor(Survived))
+Titanic = Titanic %>% mutate(Pclass = as.factor(Pclass))
+Titanic = Titanic %>% mutate(Sex = as.factor(Sex))
+Titanic
+```
+
+  - *Probability a female in second class survived*  
+  0.9210526
+
+```{r}
+fe_in_first <- Titanic %>% filter(Sex == 'female') %>% filter(Survived == '1') %>% filter(Pclass == '1')
+fe_in_first_n <- nrow(fe_in_first)
+
+
+fe_in_second <- Titanic %>% filter(Sex == 'female') %>% filter(Survived == '1') %>% filter(Pclass == '2')
+fe_in_second <- nrow(fe_in_second)
+
+people_in_first <- nrow(Titanic  %>% filter(Pclass == '1')%>% filter(Sex == 'female'))
+people_in_second <- nrow(Titanic  %>% filter(Pclass == '2')%>% filter(Sex == 'female'))
+
+fe_in_first_rate <- fe_in_first_n / people_in_first
+fe_in_second_rate <- fe_in_second / people_in_second
+fe_in_first_rate
+fe_in_second_rate
+```
+
+b)  Was there a statistically significant difference in the percentage of females in first class that survived and the percentage of females in second class that survived (at an alpha = 0.05)?
+
+```{r}
+test_data <- Titanic %>% mutate(Survived = as.numeric(as.character(Survived)))%>% 
+  filter(Sex == 'female') %>% 
+  filter(Pclass =='1' | Pclass =='2')
+test_data
+t.test(Survived~Pclass, data=test_data)
+
+```
+
+  - We see that the p-value is greater than 0.05, so we accept the null hypothesis and conclude that the difference in survival rate between the two passenger classes is not statistically significant.
+
+
+c)  Using rpart and rpart.plot, construct a decision tree to predict whether a passenger survived based on passenger class (Pclass), Sex, and Age and plot the decision tree. 
+
+```{r}
+full_tree = rpart(Survived~ Sex + Age +Pclass , data = Titanic, method = "class")
+rpart.plot(full_tree, tweak = 1, type = 5)
+```
+
+d)  Answer the following questions based on this decision tree:  (10 points)
+* What was the most important factor in determining whether a passenger survived?  *sex*
+
+```{r}
+full_tree$variable.importance
+```
+* What was the second most important factor in determining whether a passenger survived?  *Pclass*
+
+* Under what circumstances Would you predict a boy under the age of 13 would survive?  
+
+*He is in the first and second Pclass which means the first and second class, it is the only circumstances I will predict he will survive*
+

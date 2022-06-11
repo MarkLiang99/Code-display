@@ -1,0 +1,266 @@
+---
+title: 'Module 7 Homework'
+author: "Haotian Liang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+For this assignment (and all assignments in this class), you are to turn in your work as an R Markdown document.  Submit both the .rmd and .pdf files.
+
+# Problem 1
+
+For this problem, you are to "manually" perform a clustering using Excel (or any other tool you prefer).  The file "Module 7 Homework Problem 1.csv" contains a small dataset.  You are to calculate the updated centroids and cluster assignments after the first two iterations using a Euclidean distance measure and the following initial centroids:  (3,3,3), (6,6,6), and (8,8,8).  Insert the contents of the centroids table and the cluster assignments table below.
+
+1A)  Centroids table:
+
+| Cluster ID | Initial Centroid | Centroid after first iteration | Centroid after second iteration |
+|:-----|:-----|:----|:-----|
+| A | 3,3,3 | 1.925,5.6,5.25 | 1.783,6.583,6.667 |
+| B | 6,6,6 | 6.107,6.121,5.629 | 6.875,5.717,4.983 |
+| C | 8,8,8 | 8.2,8.05,9.6   | 8.2,8.05,9.6 |
+
+1B)  Cluster assignments table:
+
+| Observation | Initial Cluster | Cluster after first iteration | Cluster after second iteration |
+|---|---|---|---|
+|1|B|B|B|
+|2|B|B|A|
+|3|B|B|B|
+|4|B|B|B|
+|5|B|B|B|
+|6|B|A|A|
+|7|A|A|A|
+|8|B|B|B|
+|9|C|C|C|
+|10|B|B|B|
+|11|B|B|A|
+|12|B|B|B|
+|13|A|A|A|
+|14|B|B|B|
+|15|C|C|C|
+|16|B|A|A|
+|17|B|B|B|
+|18|B|B|B|
+|19|A|A|A|
+|20|A|A|A|
+
+1C)  If you did another iteration, would you expect the clusters to change?  Why or why not?
+
+  - I think it will change. After evaluate the distance to cluster centroid after 2nd iteration, we see some centroids has some change. Thus, the cluster has changed too. 
+  
+
+# Problem 2
+
+For this problem, we will be performing a k-means clustering on a dataset of customers for a subscription product.  The dataset contains customer age, gender, household income, number of children, home ownership, and subscription status.  Do not forget to scale the dataset prior to performing any calculations using it!
+
+2A)  Read the file "customer_segmentation.csv" into a tibble and calculate the Hopkins statistic of the dataset using only the numeric attributes.  Does this dataset appear to contain natural clusters?  Why do you say this?
+
+  - There is no contain natural clusters, because hopkins statistic is 0.9916125 which is lager than 0.5, so there no contain natural clusters. 
+
+```{r}
+library(tidyverse)
+customer <-  read_csv('customer_segmentation.csv')
+customer
+```
+```{r}
+customer_scaled <-  customer %>% select(age,income,kids) 
+customer_scaled <-  scale(customer_scaled)
+customer_scaled = as.tibble(customer_scaled)
+customer_scaled
+```
+
+```{r}
+set.seed(1)
+library(hopkins)
+hopkins(customer_scaled, 10)
+```
+
+
+2B)  Using the dataset of only numeric attributes, perform a kmeans clustering with four clusters.  Produce a table of summarizing the following statistics for each cluster:  Cluster size, average, average income, and average number of children.  Include the command set.seed(1) prior to running the kmeans algorithm to ensure that we all get the same results.
+
+```{r}
+set.seed(1)
+km = kmeans(customer_scaled, 4, nstart=10)
+customer$Cluster <- as_factor(km$cluster)
+customer
+```
+
+
+```{r}
+set.seed(1)
+customer %>% group_by(Cluster) %>% summarize(Size = n(), age = mean(age), income= mean(income),
+                                             kids=mean(kids))
+```
+
+
+2C)  Convert the three binary categories to numeric values (0 and 1).  Calculate the Hopkins statistic for this dataset with all of the attributes.  Does this dataset appear to contain natural clusters?  Why do you say this? 
+
+  - There is no  contain natural clusters, because hopkins statistic is 0.9904589 which is lager than 0.5, so there is contain natural clusters.
+
+```{r}
+customer <-  read_csv('customer_segmentation.csv')
+customer <- customer %>% mutate(gender = case_when( gender == 'Male' ~ 0,
+                                                    gender == 'Female' ~ 1),
+                                ownHome = case_when(ownHome == 'ownYes' ~ 1,
+                                                    ownHome == 'ownNo' ~ 0),
+                                subscribe = case_when(subscribe == 'subYes'~1,
+                                                      subscribe == 'subNo'~0))
+customer
+```
+```{r}
+customer_scaled <-  scale(customer)
+customer_scaled = as.tibble(customer_scaled)
+set.seed(1)
+library(tidyverse)
+hopkins(customer_scaled, 10)
+```
+2D)  Using the dataset of all attributes, perform a kmeans clustering with four clusters.  Produce a table of summarizing the following statistics for each cluster:  Cluster size, average, average income, average number of children, percentage female, percentage homeowner, and percentage subscriber.  Include the command set.seed(1) prior to running the kmeans algorithm to ensure that we all get the same results.
+
+```{r}
+set.seed(1)
+km = kmeans(customer_scaled, 4, nstart=10)
+customer$Cluster <- as_factor(km$cluster)
+customer
+```
+```{r}
+set.seed(1)
+customer %>% group_by(Cluster) %>% summarize(Size = n(), age = mean(age), income= mean(income),
+                                             kids=mean(kids),
+                                              percentage_female=round(sum(gender)/n()*100,2),
+                                             percentage_homeowner =round(sum(ownHome)/n()*100,2),
+                                             percentage_subscriber= round(sum(subscribe)/n()*100,2))
+```
+
+
+2E)  For the clustering of this dataset (with all attributes), answer the following questions:
+  - Which cluster is the most cohesive?  The second cluster is the most cohesiv
+  - Which cluster is the most diffuse?  The third cluster is the most diffuse
+  
+```{r}
+library(ggplot2)
+ggplot(customer) + geom_point(aes(x=age,y=income,colour =Cluster),size =1)
+```
+
+# Problem 3 
+
+a) Perform a hierarchical clustering on the dataset "Credit.csv" using the average, single, and complete algorithms for distance between clusters using the attributes Income, Rating, Age, Education, and Balance..  Create a single graphic showing the dendograms from the three algorithms. 
+
+```{r}
+Credit <-  read_csv('Credit.csv')
+Credit_1 <- Credit %>% select(Income, Rating, Age, Education,Balance)
+Credit_1
+```
+```{r}
+hc.complete=hclust(dist(Credit_1), method="complete")
+hc.average=hclust(dist(Credit_1), method="average")
+hc.single=hclust(dist(Credit_1), method="single")
+```
+
+```{r}
+par(mfrow=c(1,3))
+plot(hc.complete, main="Complete  Linkage", xlab="", sub="",cex=.9)
+plot(hc.average, main="Average Linkage", xlab="", sub="",cex=.9)
+plot(hc.single, main="Single Linkage", xlab="", sub="",cex=.9)
+```
+
+b) Using the "complete" clustering results, produce an elbow diagram showing the total within-cluster sum of squares metric for each value of K from 1 to 10 (write your own function to create the elbow diagram, do not use a library package). 
+
+```{r}
+x.grps <- cutree(hc.complete, 1:10)
+totwss = tibble(num_clusters = 1:10, tot_withinss = 0)
+for (i in 1:10) {
+  x.grps <- cutree(hc.complete, 1:10)
+  x.SS <- aggregate(Credit_1, by=list(x.grps[, i]), function(Credit_1) sum(scale(Credit_1,
+        scale=FALSE)^2))
+  x.SS
+  SS <- rowSums(x.SS[, -1]) # Sum of squares for each cluster
+  TSS <- sum(x.SS[, -1])  # Total (within) sum of squares
+  totwss$tot_withinss[i] = TSS
+}
+ggplot(totwss, aes(x = num_clusters, y=tot_withinss)) + geom_line() + geom_point()
+
+```
+
+
+c)  Based on reviewing your elbow diagram, what value (or values) would you recommend be used for the number of clusters?
+
+* 4
+
+# Problem 4 
+
+Using the file "College.csv", perform a cluster analysis to assist the USC executive staff in identifying which other universities are its direct "competitors".  Summarize the attributes of the other universities in this group.  Select the attributes that you think are most relevant to this analysis and follow the general guidelines from the end of the Module 3 PowerPoint.  Clearly, there are many possible decisions that you can make in the process.  For full credit, document your decisions and your rationale.
+
+```{r}
+College <-  read_csv('College.csv')
+College
+```
+
+
+```{r}
+Colleg1 <-  College %>% select(Accept,Enroll,F.Undergrad,P.Undergrad,PhD,Room.Board,Expend,Grad.Rate)
+Colleg1
+```
+
+
+
+```{r}
+library(ggcorrplot)
+ggcorrplot(cor(Colleg1%>% select_if(is.numeric)), lab = TRUE)
+Colleg1 <- Colleg1 %>% select( - 'F.Undergrad', - 'Enroll')
+```
+
+
+```{r}
+set.seed(1)
+college1_scale = scale(Colleg1 %>% select_if(is.numeric))
+hopkins(college1_scale, 10)
+
+totwss = tibble(num_clusters = 1:10, tot_withinss = 0)
+for (i in 1:10) {
+  km = kmeans(college1_scale, i, nstart=10)
+  totwss$tot_withinss[i] = km$tot.withinss
+}
+ggplot(totwss, aes(x = num_clusters, y=tot_withinss)) + geom_line() + geom_point()
+```
+
+
+
+```{r}
+## Because of the graph, I choose the 5
+km_college = kmeans(college1_scale, 5, nstart=10)
+Colleg1 = Colleg1 %>% mutate(Cluster = as_factor(km_college$cluster))
+Colleg1
+```
+
+
+
+```{r}
+Colleg1 %>% group_by(Cluster) %>% summarize(Size = n(), Accept = mean(Accept), 
+                                            P.Undergrad =mean(P.Undergrad), 
+                                            PhD = mean(PhD), 
+                                            Room.Board = mean(Room.Board), 
+                                            Expend = mean(Expend), 
+                                            Grad.Rate = mean(Grad.Rate))
+```
+```{r}
+College = College %>% mutate(Cluster = as_factor(km_college$cluster))
+College %>% filter(...1 == 'University of Southern California') %>% select(`...1`,Cluster)
+```
+
+
+There are 5 cluster for the database. USC belong to the first one, the university which in the cluster 1 is the direct "competitors. 
+*There are many acceptable responses to this question. The grading guidelines are below:*
+
+* Identification of reasonable set of attributes with rationale provided (5 points)
+* Selected attributes avoid redundant (highly correlated) parameters (5 points)
+* The attributes are normalized before clustering (5 points)
+* The k-Means (or hierarchical) algorithm is used correctly (5 points)
+* The results are presented and summarized (5 points)
